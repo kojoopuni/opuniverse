@@ -1,0 +1,14 @@
+# Core dependencies
+fastapi>=0.104.0            # Remove upper bound constraint
+uvicorn>=0.15.0            # Remove upper bound constraint
+pydantic>=2.4.2            # Update to v2+ as required by newer FastAPI
+
+# CrewAI and related packages
+crewai>=0.76.2             # Latest version
+crewai-tools>=0.13.2       # Latest version
+langchain>=0.0.329         # Latest version
+
+# Utility packages
+python-dotenv
+requests>=2.26.0
+PyYAML>=5.4.1
