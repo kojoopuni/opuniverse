@@ -16,8 +16,11 @@ class MarketResearchTool(BaseTool):
     """
     
     def _run(self, niche: str) -> Dict[str, Any]:
+        """
+        Main execution method for market research
+        """
         try:
-            # For now, return mock data (we'll integrate real APIs later)
+            # Return mock data (we'll integrate JungleScout API later)
             return {
                 "niche": niche,
                 "demand_analysis": {
