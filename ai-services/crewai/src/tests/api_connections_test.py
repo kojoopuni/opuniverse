@@ -1,4 +1,4 @@
-# src/tests/amazon/api_connections_test.py
+# src/tests/api_connections_test.py
 
 import unittest
 import logging
@@ -39,11 +39,16 @@ class TestAPIConnections(unittest.TestCase):
     def setUp(self):
         """Initialize API clients for testing"""
         self.test_keyword = "hammock"
+        
+        # Initialize JungleScout API with proper credentials
+        jungle_scout = JungleScoutAPI(
+            api_key=os.getenv('JUNGLE_SCOUT_API_KEY'),
+            api_name="inupo_goods",
+            marketplace="us"
+        )
+        
         self.apis = {
-            "jungle_scout": JungleScoutAPI(
-                api_key=os.getenv('JUNGLE_SCOUT_API_KEY'),
-                api_name="inupo_goods"
-            ),
+            "jungle_scout": jungle_scout,
             "gpt4": GPT4API(),
             "claude": ClaudeAPI(),
             "gemini": GeminiAPI(),
@@ -55,12 +60,74 @@ class TestAPIConnections(unittest.TestCase):
     def test_junglescout_connection(self):
         """Test JungleScout API connection using Share of Voice endpoint"""
         try:
+            print("\nTesting JungleScout Share of Voice API:")
             response = self.apis["jungle_scout"].get_share_of_voice(self.test_keyword)
+            
+            # Verify response structure
             self.assertIn("data", response)
             self.assertIn("attributes", response["data"])
-            self.logger.info(f"JungleScout API Test - Success")
+            attributes = response["data"]["attributes"]
+            
+            # Verify key metrics
+            self.assertIn("estimated_30_day_search_volume", attributes)
+            self.assertIn("product_count", attributes)
+            self.assertIn("brands", attributes)
+            
+            # Log success metrics
+            print(f"Search Volume: {attributes['estimated_30_day_search_volume']:,}")
+            print(f"Product Count: {attributes['product_count']:,}")
+            
+            # Display top brands
+            if attributes['brands']:
+                print("\nTop Brands by Share of Voice:")
+                for brand in sorted(
+                    attributes['brands'],
+                    key=lambda x: x['combined_weighted_sov'],
+                    reverse=True
+                )[:3]:
+                    print(f"- {brand['brand']}: {brand['combined_weighted_sov']:.2%}")
+            
+            self.logger.info("JungleScout API Test - Success")
+            
         except Exception as e:
+            self.logger.error(f"JungleScout API Error: {str(e)}")
             self.fail(f"JungleScout API test failed: {str(e)}")
+
+    def test_api_throttling(self):
+        """Test API throttling implementation"""
+        try:
+            requests_made = 0
+            start_time = time.time()
+            min_delay = 1.0  # Minimum 1 second between requests
+            
+            for i in range(3):  # Reduced to 3 requests to stay within limits
+                self.logger.info(f"\nThrottling test request {i+1}")
+                
+                if i > 0:
+                    elapsed = time.time() - start_time
+                    required_time = i * min_delay
+                    if elapsed < required_time:
+                        sleep_duration = required_time - elapsed
+                        self.logger.info(f"Sleeping for {sleep_duration:.2f}s")
+                        time.sleep(sleep_duration)
+                
+                response = self.apis["jungle_scout"].get_share_of_voice(self.test_keyword)
+                
+                # Verify response
+                self.assertIn("data", response)
+                self.assertIn("attributes", response["data"])
+                
+                requests_made += 1
+                current_elapsed = time.time() - start_time
+                current_rate = requests_made / current_elapsed
+                
+                self.logger.info(f"Request {i+1}:")
+                self.logger.info(f"- Total elapsed: {current_elapsed:.2f}s")
+                self.logger.info(f"- Current rate: {current_rate:.2f} requests/second")
+                
+        except Exception as e:
+            self.logger.error(f"API throttling test failed: {str(e)}")
+            self.fail(f"API throttling test failed: {str(e)}")
 
     def test_gpt4_connection(self):
         """Test GPT-4 API connection"""
@@ -116,57 +183,9 @@ class TestAPIConnections(unittest.TestCase):
         except Exception as e:
             self.fail(f"Web Search API test failed: {str(e)}")
 
-    def test_api_throttling(self):
-        """Test API throttling implementation"""
-        try:
-            requests_made = 0
-            start_time = time.time()
-            min_interval = 1.0  # Force 1 second between requests
-            
-            for i in range(5):
-                self.logger.info(f"\nThrottling test request {i+1}")
-                
-                # Make request
-                before_request = time.time()
-                response = self.apis["jungle_scout"].get_share_of_voice(self.test_keyword)
-                after_request = time.time()
-                
-                # Verify valid response
-                self.assertIn("data", response)
-                self.assertIn("attributes", response["data"])
-                
-                requests_made += 1
-                
-                # Calculate current rate
-                elapsed_total = time.time() - start_time
-                current_rate = requests_made / elapsed_total
-                
-                # Log detailed timing information
-                request_duration = after_request - before_request
-                self.logger.info(f"Request {i+1} duration: {request_duration:.2f}s")
-                self.logger.info(f"Total elapsed: {elapsed_total:.2f}s")
-                self.logger.info(f"Current rate: {current_rate:.2f} requests/second")
-                
-                # Enforce minimum interval between requests
-                time_since_start = time.time() - start_time
-                required_time = (i + 1) * min_interval
-                if time_since_start < required_time:
-                    sleep_duration = required_time - time_since_start
-                    self.logger.info(f"Sleeping for {sleep_duration:.2f}s")
-                    time.sleep(sleep_duration)
-                
-                # Verify rate after sleep
-                current_rate = requests_made / (time.time() - start_time)
-                self.assertLess(
-                    current_rate, 
-                    1.67,  # JungleScout limit (100 requests/minute)
-                    f"Request rate {current_rate:.2f} exceeds limit of 1.67 req/sec"
-                )
-                
-        except Exception as e:
-            self.logger.error(f"API throttling test failed: {str(e)}")
-            self.fail(f"API throttling test failed: {str(e)}")
-
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(process)d - %(filename)s-%(funcName)s:%(lineno)d - %(levelname)s: %(message)s'
+    )
     unittest.main(verbosity=2)

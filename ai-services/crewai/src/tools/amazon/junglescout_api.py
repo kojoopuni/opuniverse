@@ -1,4 +1,5 @@
 # src/tools/amazon/junglescout_api.py
+
 from typing import Dict, Any, Optional, List
 import logging
 import requests
@@ -8,27 +9,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 class BrandMetrics(BaseModel):
-    """
-    Model for brand performance metrics in Amazon search results.
-    
-    Attributes:
-        brand: Brand name
-        combined_products: Total products (organic + sponsored)
-        combined_weighted_sov: Overall share of voice (weighted)
-        combined_basic_sov: Basic share of voice
-        combined_average_position: Average position in search results
-        combined_average_price: Average price across all products
-        organic_products: Number of organic listings
-        organic_weighted_sov: Share of voice for organic listings
-        organic_basic_sov: Basic share for organic listings
-        organic_average_position: Average organic position
-        organic_average_price: Average price of organic listings
-        sponsored_products: Number of sponsored listings
-        sponsored_weighted_sov: Share of voice for sponsored listings
-        sponsored_basic_sov: Basic share for sponsored listings
-        sponsored_average_position: Average sponsored position
-        sponsored_average_price: Average price of sponsored listings
-    """
+    """Model for brand performance metrics in Amazon search results"""
     brand: str
     combined_products: int
     combined_weighted_sov: float
@@ -47,17 +28,7 @@ class BrandMetrics(BaseModel):
     sponsored_average_price: Optional[float]
 
 class TopAsin(BaseModel):
-    """
-    Model for top performing ASINs data.
-    
-    Attributes:
-        asin: Amazon Standard Identification Number
-        name: Product name (optional)
-        brand: Brand name (optional)
-        clicks: Number of clicks received
-        conversions: Number of conversions
-        conversion_rate: Conversion rate (conversions/clicks)
-    """
+    """Model for top performing ASINs data"""
     asin: str
     name: Optional[str]
     brand: Optional[str]
@@ -66,19 +37,7 @@ class TopAsin(BaseModel):
     conversion_rate: float
 
 class ShareOfVoiceAttributes(BaseModel):
-    """
-    Model for Share of Voice response attributes.
-    
-    Attributes:
-        estimated_30_day_search_volume: Monthly search volume
-        exact_suggested_bid_median: Suggested PPC bid
-        product_count: Number of products analyzed
-        updated_at: Last data refresh timestamp
-        brands: List of brand performance metrics
-        top_asins: List of top performing ASINs
-        top_asins_model_start_date: Start date for top ASINs data
-        top_asins_model_end_date: End date for top ASINs data
-    """
+    """Model for Share of Voice response attributes"""
     estimated_30_day_search_volume: int
     exact_suggested_bid_median: Optional[float]
     product_count: int
@@ -89,30 +48,15 @@ class ShareOfVoiceAttributes(BaseModel):
     top_asins_model_end_date: Optional[str]
 
 class JungleScoutAPI:
-    """
-    JungleScout API client for Amazon marketplace research and analysis.
+    """JungleScout API client for Amazon marketplace research and analysis"""
     
-    This client provides access to:
-    - Share of Voice analysis
-    - Keyword research
-    - Sales estimates
-    - Product database
-    - Historical data
-    """
-
-    def __init__(self, api_key: str, api_name: str = "inupo_goods", marketplace: str = "us"):
-        """
-        Initialize the API client.
-        
-        Args:
-            api_key: Your JungleScout API key
-            api_name: Your API client identifier
-            marketplace: Target marketplace (us, uk, de, etc.)
-        """
+    def __init__(self, api_key: str = None, api_name: str = "inupo_goods", marketplace: str = "us"):
+        """Initialize JungleScout API client"""
         self.api_key = api_key
         self.api_name = api_name
         self.marketplace = marketplace.lower()
         self.base_url = "https://developer.junglescout.com"
+        
         self.headers = {
             "Authorization": f"{api_name}:{api_key}",
             "Content-Type": "application/vnd.api+json",
@@ -121,24 +65,10 @@ class JungleScoutAPI:
         }
 
     def get_share_of_voice(self, keyword: str) -> Dict[str, Any]:
-        """
-        Get Share of Voice data for a keyword search on Amazon.
-        
-        This endpoint provides:
-        - Brand control for first 3 pages of search results
-        - Organic and sponsored performance metrics
-        - PPC bid suggestions
-        - 30-day search volume
-        - Top 3 ASINs conversion rates (past week)
-        
-        Args:
-            keyword: The keyword to analyze
-            
-        Returns:
-            Dict containing share of voice metrics and brand performance data
-        """
+        """Get Share of Voice data for a keyword search on Amazon"""
         try:
             endpoint = f"{self.base_url}/api/share_of_voice"
+            
             params = {
                 "marketplace": self.marketplace,
                 "keyword": keyword
@@ -158,10 +88,10 @@ class JungleScoutAPI:
                         logger.info(f"Suggested Bid: ${attributes.exact_suggested_bid_median:.2f}")
                     logger.info(f"Product Count: {attributes.product_count:,}")
                     
-                    # Log top brands by share of voice
+                    # Log top brands
                     top_brands = sorted(
-                        attributes.brands, 
-                        key=lambda x: x.combined_weighted_sov, 
+                        attributes.brands,
+                        key=lambda x: x.combined_weighted_sov,
                         reverse=True
                     )[:5]
                     
@@ -172,37 +102,28 @@ class JungleScoutAPI:
                         logger.info(f"Products: {brand.combined_products}")
                         logger.info(f"Avg Position: {brand.combined_average_position:.1f}")
                         logger.info("---")
-                    
+                        
                 except Exception as e:
                     logger.error(f"Error processing response: {str(e)}")
-                
+                    
             return response
             
         except Exception as e:
             logger.error(f"Share of voice error: {str(e)}")
             raise
 
-    def _make_request(self, method: str, endpoint: str, params: Dict = None, json: Dict = None) -> Dict[str, Any]:
-        """
-        Make API request with error handling and logging.
-        
-        Args:
-            method: HTTP method (GET, POST)
-            endpoint: API endpoint URL
-            params: Query parameters
-            json: JSON request body
-            
-        Returns:
-            Dict containing API response data
-            
-        Raises:
-            requests.exceptions.RequestException: If API request fails
-        """
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        params: Dict = None,
+        json: Dict = None
+    ) -> Dict[str, Any]:
+        """Make API request with error handling and logging"""
         try:
             logger.info(f"Making request to: {endpoint}")
+            logger.info(f"Using auth string: {self.api_name}:****")
             logger.info(f"Headers: {self.headers}")
-            logger.info(f"Params: {params}")
-            logger.info(f"JSON data: {json}")
             
             response = requests.request(
                 method=method,
@@ -220,6 +141,7 @@ class JungleScoutAPI:
                 
             response.raise_for_status()
             return response.json()
+            
         except requests.exceptions.RequestException as e:
             logger.error(f"API request error: {str(e)}")
             raise
