@@ -12,3 +12,8 @@ langchain>=0.0.329         # Latest version
 python-dotenv
 requests>=2.26.0
 PyYAML>=5.4.1
+
+# AI tools
+anthropic>=0.3.1
+openai>=1.36.0
+google-generativeai>=0.8.3 
