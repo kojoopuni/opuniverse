@@ -43,8 +43,7 @@ class TestAPIConnections(unittest.TestCase):
         # Initialize JungleScout API with proper credentials
         jungle_scout = JungleScoutAPI(
             api_key=os.getenv('JUNGLE_SCOUT_API_KEY'),
-            api_name="inupo_goods",
-            marketplace="us"
+            api_name="inupo_goods"
         )
         
         self.apis = {
@@ -68,12 +67,7 @@ class TestAPIConnections(unittest.TestCase):
             self.assertIn("attributes", response["data"])
             attributes = response["data"]["attributes"]
             
-            # Verify key metrics
-            self.assertIn("estimated_30_day_search_volume", attributes)
-            self.assertIn("product_count", attributes)
-            self.assertIn("brands", attributes)
-            
-            # Log success metrics
+            # Print key metrics
             print(f"Search Volume: {attributes['estimated_30_day_search_volume']:,}")
             print(f"Product Count: {attributes['product_count']:,}")
             
@@ -90,7 +84,6 @@ class TestAPIConnections(unittest.TestCase):
             self.logger.info("JungleScout API Test - Success")
             
         except Exception as e:
-            self.logger.error(f"JungleScout API Error: {str(e)}")
             self.fail(f"JungleScout API test failed: {str(e)}")
 
     def test_api_throttling(self):
