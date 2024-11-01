@@ -1,12 +1,21 @@
 # src/crews/amazon/amazon_crew.py
 
-import logging
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
+import logging
 from crewai import Agent, Task, Crew, Process
+
+# Amazon specific tools
 from tools.amazon.junglescout_api import JungleScoutAPI
-from tools.web_search import WebSearchTool
-from tools.perplexity import PerplexitySearchTool
+
+# AI tools
+from tools.ai.gpt4_api import GPT4API
+from tools.ai.claude_api import ClaudeAPI
+from tools.ai.gemini_api import GeminiAPI
+
+# Search tools
+from tools.search.web_search import WebSearchTool
+from tools.search.perplexity import PerplexitySearchTool
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +23,9 @@ class ValidationCriteria:
     """Validation criteria for Amazon product opportunities based on JungleScout data"""
     
     def __init__(self):
-        # Market Criteria
+        # Market Criteria based on Share of Voice data
         self.market_criteria = {
-            "min_search_volume": 10000,        # Based on Share of Voice data
+            "min_search_volume": 10000,        # Based on sample showing 142,377 searches
             "max_competition": 0.7,            # Maximum market share for top 3 brands
             "min_profit_margin": 0.3,          # 30% minimum profit margin
             "max_price_volatility": 0.15       # Maximum price change percentage
@@ -32,20 +41,12 @@ class ValidationCriteria:
             "min_margin_dollars": 15.00       # Minimum profit in dollars
         }
 
-        # Competition Criteria
+        # Competition Criteria based on Share of Voice metrics
         self.competition_criteria = {
-            "max_top_brand_share": 0.30,      # Max share for single brand
+            "max_top_brand_share": 0.30,      # Max share for single brand (like sample showing 25%)
             "min_organic_opportunity": 0.20,   # Minimum organic opportunity
             "max_sponsored_share": 0.40,       # Maximum sponsored product share
             "min_market_gap": 0.10            # Minimum market gap opportunity
-        }
-
-        # Supplier Criteria
-        self.supplier_criteria = {
-            "max_shipping_time": 7,           # Maximum days for shipping
-            "min_inventory_level": 100,        # Minimum inventory availability
-            "max_moq": 50,                    # Maximum minimum order quantity
-            "min_supplier_rating": 4.0         # Minimum supplier rating
         }
 
 class AmazonResearchCrew:
@@ -57,7 +58,7 @@ class AmazonResearchCrew:
         self.memory_store = MemoryStore()
 
     def _create_agents(self) -> Dict[str, Agent]:
-        """Initialize all specialized agents with rich personas"""
+        """Initialize all specialized agents with rich personas and appropriate tools"""
         
         market_researcher = Agent(
             name="Dr. Sarah Chen",
@@ -70,7 +71,11 @@ class AmazonResearchCrew:
             evaluating market opportunities that have led to over 200 successful product 
             launches. Expert in analyzing Share of Voice data, competitor metrics, and 
             market trends to identify underserved niches with high profit potential.""",
-            tools=[JungleScoutAPI(), PerplexitySearchTool()],
+            tools=[
+                JungleScoutAPI(),
+                PerplexitySearchTool(),
+                GPT4API()
+            ],
             verbose=True,
             allow_delegation=True
         )
@@ -84,9 +89,12 @@ class AmazonResearchCrew:
             backstory="""Former management consultant with 12 years specializing in 
             competitive analysis. Expert in analyzing Share of Voice data, brand 
             positioning, and market dynamics. Developed frameworks for competitive 
-            advantage analysis used by Fortune 500 companies. Specializes in identifying 
-            market gaps and entry opportunities.""",
-            tools=[JungleScoutAPI(), PerplexitySearchTool()],
+            advantage analysis used by Fortune 500 companies.""",
+            tools=[
+                JungleScoutAPI(),
+                ClaudeAPI(),
+                PerplexitySearchTool()
+            ],
             verbose=True,
             allow_delegation=True
         )
@@ -100,9 +108,12 @@ class AmazonResearchCrew:
             backstory="""Former Amazon Category Manager with 10 years of experience in 
             product selection and validation. Developed a systematic approach that has 
             resulted in a 78% success rate for new product launches. Expert in analyzing 
-            sales velocity, profit margins, and competition levels to identify truly 
-            viable opportunities.""",
-            tools=[JungleScoutAPI()],
+            sales velocity, profit margins, and competition levels.""",
+            tools=[
+                JungleScoutAPI(),
+                GPT4API(),
+                WebSearchTool()
+            ],
             verbose=True,
             allow_delegation=True
         )
@@ -116,9 +127,12 @@ class AmazonResearchCrew:
             backstory="""Former pricing optimization expert with 15 years of experience 
             in e-commerce. Developed pricing algorithms that increased profits by 40% 
             for major retailers. Expert in analyzing competitor pricing, market 
-            positioning, and elasticity to find optimal price points. Specializes in 
-            dynamic pricing strategies and margin optimization.""",
-            tools=[JungleScoutAPI(), GPT4API()],
+            positioning, and elasticity to find optimal price points.""",
+            tools=[
+                JungleScoutAPI(),
+                GPT4API(),
+                ClaudeAPI()
+            ],
             verbose=True,
             allow_delegation=True
         )
@@ -132,9 +146,12 @@ class AmazonResearchCrew:
             backstory="""Supply chain expert with 12 years of experience in international 
             trade and supplier relationships. Built an extensive network of reliable 
             suppliers across Asia. Developed quality control systems that reduced defect 
-            rates by 95%. Expert in negotiating optimal pricing and terms while ensuring 
-            product quality and reliability.""",
-            tools=[WebSearchTool(), PerplexitySearchTool()],
+            rates by 95%.""",
+            tools=[
+                WebSearchTool(),
+                PerplexitySearchTool(),
+                GeminiAPI()
+            ],
             verbose=True,
             allow_delegation=True
         )
@@ -147,10 +164,12 @@ class AmazonResearchCrew:
             search rankings and high conversion rates.""",
             backstory="""Former Amazon A9 Algorithm Specialist with deep expertise in 
             search ranking factors and buyer psychology. Optimized over 5,000 listings 
-            achieving 156% average increase in conversion rates. Expert in keyword 
-            optimization, content strategy, and A/B testing methodologies. Specializes 
-            in creating high-converting product listings.""",
-            tools=[JungleScoutAPI(), GPT4API()],
+            achieving 156% average increase in conversion rates.""",
+            tools=[
+                JungleScoutAPI(),
+                GPT4API(),
+                ClaudeAPI()
+            ],
             verbose=True,
             allow_delegation=True
         )
@@ -163,10 +182,13 @@ class AmazonResearchCrew:
             identify growth opportunities.""",
             backstory="""Data scientist specializing in market trend analysis with 
             10 years of experience. Developed predictive models that accurately 
-            forecast market trends with 85% accuracy. Expert in analyzing seasonal 
-            patterns, consumer behavior, and emerging market opportunities. Created 
-            trend prediction models used by major e-commerce platforms.""",
-            tools=[JungleScoutAPI(), PerplexitySearchTool()],
+            forecast market trends with 85% accuracy. Created trend prediction 
+            models used by major e-commerce platforms.""",
+            tools=[
+                JungleScoutAPI(),
+                PerplexitySearchTool(),
+                GeminiAPI()
+            ],
             verbose=True,
             allow_delegation=True
         )
