@@ -1,4 +1,5 @@
 # src/tools/amazon/junglescout_tool.py
+# COMPLETE SCRIPT
 
 from typing import Dict, Any
 import os
@@ -13,15 +14,17 @@ api = JungleScoutAPI(
 
 @tool("Amazon Market Research")
 def analyze_market(keyword: str) -> str:
-    """Analyzes Amazon market data for a given keyword using JungleScout.
+    """Analyzes Amazon market data with specialized metrics for product selection.
     
     Args:
-        keyword: The product keyword to analyze (e.g., "hammock", "yoga mat")
-        
-    Returns:
-        Detailed market analysis including search volume, top brands, and metrics
+        keyword: The product keyword to analyze (e.g., "hammock")
     """
     try:
+        # Ensure keyword is a string
+        if not isinstance(keyword, str):
+            keyword = str(keyword)
+            
+        # Call the API with just the keyword
         result = api.get_share_of_voice(keyword)
         
         if "data" not in result or "attributes" not in result["data"]:
@@ -29,28 +32,29 @@ def analyze_market(keyword: str) -> str:
             
         attrs = result["data"]["attributes"]
         
-        # Format the response
+        # Format comprehensive analysis
         response = [
-            f"\nMarket Analysis for '{keyword}':",
-            f"Monthly Search Volume: {attrs['estimated_30_day_search_volume']:,}",
-            f"Total Products: {attrs['product_count']:,}"
+            f"\nAdvanced Market Analysis for '{keyword}':",
+            
+            "\n1. Market Size and Demand:",
+            f"- Monthly Search Volume: {attrs['estimated_30_day_search_volume']:,}",
+            f"- Total Products: {attrs['product_count']:,}",
+            f"- Market Saturation: {len(attrs.get('brands', [])) / attrs['product_count']:.2%}",
+            
+            "\n2. Competitive Landscape:",
+            "Top Brands Performance:"
         ]
         
-        if attrs.get('brands'):
-            response.append("\nTop Brands by Market Share:")
-            sorted_brands = sorted(
-                attrs['brands'],
-                key=lambda x: x['combined_weighted_sov'],
-                reverse=True
-            )[:5]
-            
-            for brand in sorted_brands:
-                response.extend([
-                    f"- {brand['brand']}:",
-                    f"  Share of Voice: {brand['combined_weighted_sov']:.1%}",
-                    f"  Products: {brand['combined_products']}",
-                    f"  Avg Position: {brand['combined_average_position']:.1f}"
-                ])
+        # Add detailed brand analysis
+        for brand in sorted(attrs.get('brands', [])[:5], key=lambda x: x['combined_weighted_sov'], reverse=True):
+            market_dominance = (brand['combined_weighted_sov'] * 100) / brand['combined_average_position']
+            response.extend([
+                f"\n{brand['brand']}:",
+                f"- Market Share: {brand['combined_weighted_sov']:.1%}",
+                f"- Products: {brand['combined_products']}",
+                f"- Average Position: {brand['combined_average_position']:.1f}",
+                f"- Market Dominance Score: {market_dominance:.2f}"
+            ])
         
         return "\n".join(response)
         
